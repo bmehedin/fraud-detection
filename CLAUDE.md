@@ -14,6 +14,7 @@ A learning project: a real-time payment fraud detection system built in batches,
 - i am very interested in scala specifics, pattern matching in jdk 25 and sealed algebraic data types. we shall build and model the domain cleanly around this. no nulls in the domain.
 - code must be organised cleanly in modules or the idiomatic scala way
 - i would like to learn the intuition behind functional programming and the intersection with maths. basic group theory, monads and monoids. is option a monoid? keep in mind these are the questions, intuitions and concepts that spark my interest and i want to learn about
+- keep the language plain and simple, formulate brief sentences. assume i know nothing and want to learn. do not go into hypothetical scenarios and rabbit holes.
 
 ## Current status
 
