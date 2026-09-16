@@ -13,10 +13,20 @@ object AmountMinor {
 final case class GeoPoint private (lat: Double, lon: Double, country: CountryCode)
 
 object GeoPoint {
+
   def parse(lat: Double, lon: Double, country: CountryCode): Either[DomainError, GeoPoint] =
+    for {
+      checkedLat <- validLat(lat)
+      checkedLon <- validLon(lon)
+    } yield new GeoPoint(checkedLat, checkedLon, country)
+
+  private def validLat(lat: Double): Either[DomainError, Double] =
     if (lat.isNaN || lat < -90.0 || lat > 90.0) Left(DomainError.LatOutOfRange(lat))
-    else if (lon.isNaN || lon < -180.0 || lon > 180.0) Left(DomainError.LonOutOfRange(lon))
-    else Right(new GeoPoint(lat, lon, country))
+    else Right(lat)
+
+  private def validLon(lon: Double): Either[DomainError, Double] =
+    if (lon.isNaN || lon < -180.0 || lon > 180.0) Left(DomainError.LonOutOfRange(lon))
+    else Right(lon)
 }
 
 sealed trait Origin
