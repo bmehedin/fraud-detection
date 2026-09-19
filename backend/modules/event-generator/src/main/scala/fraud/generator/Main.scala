@@ -7,23 +7,16 @@ object Main extends IOApp.Simple {
   private val hi: IO[Unit] = IO(println("hi"))
   val run: IO[Unit] = hi
 
-  val pair: Rand[(Long, Long)] =
+  val pair: Rand[(Long, Long, Long)] =
     for {
       a <- Rand.nextLong
       b <- Rand.nextLong
-    } yield (a, b)
+      c <- Rand.nextLong
+    } yield (a, b, c)
 
-  println(pair.run(Seed(42))._1)
-
-  /*
-  * why does println(pair.run(Seed(42))._1) return (Long, Long)
-
-let's unpack this entirely
-* for comprehension threads the seed from a to b
-*  to generate two Long numbers. but why is the type of pair Rand[(Long, Long)]
-  *
-  *
-  *resume last conversation
-  *
-  * */
+  println(pair.run(Seed(42)))
+//  for the same seed you will of course get the same randomly generated numbers
+//  each generated long value is threaded through as a Seed to generate the next long
+//  naturally, using the same seed generated the same number
+//  pair has as type (Long, Long, Long) because that is the structure of the yield statement. for more chained operations, scala can infer the type - no need to write it
 }

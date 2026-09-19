@@ -28,7 +28,7 @@ The only input event. Kafka topic `transactions.raw`, key = `cardId` (as raw UTF
 | `cardId` | `CardId` | no | Partition key. Ordering is guaranteed only within one of these. |
 | `merchantId` | `MerchantId` | no | |
 | `merchantCategory` | `MerchantCategory` | no | Sealed ADT, ~8 cases. Not an open string. |
-| `amountMinor` | `Long` | no | EUR cents. Always > 0; a refund is out of scope. |
+| `amountMinor` | `AmountMinor` | no | EUR cents. Always > 0, enforced by the type; a refund is out of scope. |
 | `origin` | `Origin` | no | Where it happened: `Physical(GeoPoint)` or `Remote(IpAddress)`. See ADR 0003. |
 | `eventTime` | `Instant` | no | UTC, millisecond precision. When the transaction happened. |
 
@@ -38,11 +38,12 @@ test for whether a field earns its place.
 ### Scala 2.13 sketch
 
 ```scala
-final case class TransactionId(value: String) extends AnyVal
-final case class CardId(value: String)        extends AnyVal
-final case class MerchantId(value: String)    extends AnyVal
-final case class CountryCode(value: String)   extends AnyVal  // ISO 3166-1 alpha-2
-final case class IpAddress(value: String)     extends AnyVal
+final case class TransactionId private (value: String) extends AnyVal
+final case class CardId private (value: String)        extends AnyVal
+final case class MerchantId private (value: String)    extends AnyVal
+final case class CountryCode private (value: String)   extends AnyVal
+final case class IpAddress private (value: String)     extends AnyVal
+final case class AmountMinor private (value: Long)     extends AnyVal
 
 sealed trait MerchantCategory
 object MerchantCategory {
@@ -56,7 +57,7 @@ object MerchantCategory {
   case object CashWithdrawal extends MerchantCategory
 }
 
-final case class GeoPoint(lat: Double, lon: Double, country: CountryCode)
+final case class GeoPoint private (lat: Double, lon: Double, country: CountryCode)
 
 sealed trait Origin
 object Origin {
@@ -69,7 +70,7 @@ final case class Transaction(
   cardId:           CardId,
   merchantId:       MerchantId,
   merchantCategory: MerchantCategory,
-  amountMinor:      Long,
+  amountMinor:      AmountMinor,
   origin:           Origin,
   eventTime:        Instant
 )
@@ -131,15 +132,28 @@ Online — note there is no `point` field at all, not a null one:
 ### Validation
 
 A record failing any of these is malformed and goes to the dead-letter topic
-`transactions.dlq` in Batch 2, never dropped silently:
+`transactions.dlq` in Batch 2, never dropped silently. The list is unchanged; what moved is
+*where* each check runs — see [ADR 0005](decisions/0005-smart-constructors.md).
+
+Refused by the constructor, because the rule needs only the value itself. Each type hides its
+constructor and exposes `parse` returning `Either[DomainError, A]`:
+
+- an id is empty or only whitespace
+- `amountMinor <= 0`
+- `country` is not two characters in `A`–`Z`
+- for `Physical`: `lat` outside [-90, 90], `lon` outside [-180, 180], or either is `NaN`
+- for `Remote`: `ip` is not four dotted octets in 0–255. IPv4 only, see ADR 0005
+
+Refused at the Kafka boundary in Batch 2, because the rule needs context:
 
 - JSON does not parse, or a required field is absent
-- `amountMinor <= 0`
 - `merchantCategory` is not a known case
 - `origin.type` is neither `Physical` nor `Remote`
-- for `Physical`: `lat` outside [-90, 90] or `lon` outside [-180, 180]
-- for `Remote`: `ip` is not a syntactically valid IPv4 or IPv6 address
-- `eventTime` is more than 24 h in the future (clock skew, not late data)
+- `eventTime` is more than 24 h in the future (clock skew, not late data) — this one needs to
+  know what *now* is, which a constructor does not
+
+Note that `TransactionId` only checks for emptiness. It is documented as a UUIDv4 but the type
+does not enforce the format.
 
 Late data is **not** malformed. An old `eventTime` is valid input; the watermark decides
 whether the slow path still uses it.

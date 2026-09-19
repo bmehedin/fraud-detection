@@ -89,6 +89,10 @@ Scala re-creates the wrapper object ("boxing"). Irrelevant at our scale.
 
 This pattern is called a **newtype**. Scala 3 has `opaque type` for it; on 2.13, `AnyVal`.
 
+The examples above predate [ADR 0005](decisions/0005-smart-constructors.md). In the code as it
+stands the constructor is private and `CardId("card-000412")` does not compile either — the
+only way to build one is `CardId.parse`, which returns an `Either`.
+
 ## 4. Sum types: `sealed trait`
 
 `case class` is "AND". This is "OR".
@@ -260,9 +264,133 @@ Note the pattern that keeps recurring: a rule that cannot answer returns `None` 
 guessing. S1 and S3 return `None` for a card with too little history. S2 returns `None` when
 either side was online. Silence is a valid answer; a fabricated one is not.
 
+## 9. `for` comprehensions, and why `Either` is a monad
+
+`GeoPoint.parse` is written as a chain:
+
+```scala
+if (lat.isNaN || lat < -90.0 || lat > 90.0) Left(DomainError.LatOutOfRange(lat))
+else if (lon.isNaN || lon < -180.0 || lon > 180.0) Left(DomainError.LonOutOfRange(lon))
+else Right(new GeoPoint(lat, lon, country))
+```
+
+Three outcomes, one expression, so both `else` branches are forced. The alternative is to name
+each check and combine them:
+
+```scala
+object GeoPoint {
+
+  def parse(lat: Double, lon: Double, country: CountryCode): Either[DomainError, GeoPoint] =
+    for {
+      checkedLat <- validLat(lat)
+      checkedLon <- validLon(lon)
+    } yield new GeoPoint(checkedLat, checkedLon, country)
+
+  private def validLat(lat: Double): Either[DomainError, Double] =
+    if (lat.isNaN || lat < -90.0 || lat > 90.0) Left(DomainError.LatOutOfRange(lat))
+    else Right(lat)
+
+  private def validLon(lon: Double): Either[DomainError, Double] =
+    if (lon.isNaN || lon < -180.0 || lon > 180.0) Left(DomainError.LonOutOfRange(lon))
+    else Right(lon)
+}
+```
+
+Each `if` now has exactly two outcomes, and the `else` earns its place.
+
+### What `for` actually is
+
+Not a loop. The compiler rewrites it mechanically:
+
+```scala
+for {
+  a <- x
+  b <- y
+} yield f(a, b)
+```
+
+becomes
+
+```scala
+x.flatMap(a => y.map(b => f(a, b)))
+```
+
+That is the whole feature. Any type with `map` and `flatMap` can be used in a `for`
+comprehension — `Either`, `Option`, `List`, `Future`, and later the streaming types in Batch 2.
+
+### `map` and `flatMap` on `Either`
+
+`Either` is **right-biased**: both methods act on the `Right` and pass a `Left` straight
+through, untouched.
+
+```scala
+Right(5).map(_ + 1)                 // Right(6)
+Left(EmptyCardId).map(_ + 1)        // Left(EmptyCardId), the function never ran
+```
+
+`map` is for a function returning a plain value. `flatMap` is for a function that returns
+another `Either` — which is what `validLon` does. With `map` you would get
+`Either[DomainError, Either[DomainError, Double]]`, a nested box. `flatMap` is `map` followed
+by removing one layer, which is where the name comes from.
+
+### Short-circuiting is the payoff
+
+In the comprehension above, if `validLat` returns a `Left`, `validLon` is never called. The
+first failure wins and the rest of the chain is skipped. Nothing in the code says "stop here";
+it falls out of `flatMap` on a `Left` ignoring its function.
+
+This is also the limitation recorded in [ADR 0005](decisions/0005-smart-constructors.md):
+because step two only runs when step one succeeded, a monad structurally *cannot* report both
+failures. Accumulating errors needs an applicative such as Cats' `Validated`, where the two
+checks do not depend on each other and both get to run.
+
+### What makes it a monad
+
+A monad is not a Scala feature. It is a shape a type can have, and `Either[E, *]` has it. Two
+operations:
+
+- a way to put a plain value in: `Right(a)` — usually called `pure` or `unit`
+- `flatMap` — usually called `bind`
+
+obeying three laws:
+
+| Law | In `Either` |
+|---|---|
+| Left identity | `Right(a).flatMap(f) == f(a)` |
+| Right identity | `e.flatMap(Right(_)) == e` |
+| Associativity | `e.flatMap(f).flatMap(g) == e.flatMap(a => f(a).flatMap(g))` |
+
+The first two say `Right` adds nothing of its own. The third says grouping does not matter —
+the same associativity a monoid demands, which is not a coincidence and is on the list below.
+
+The laws are why `for` comprehensions can be nested, refactored and split without changing
+meaning. A type that broke them would make that rewriting unsafe.
+
+### Applied
+
+`GeoPoint.parse` now uses the comprehension above. The 29 existing tests passed unchanged,
+including "should report the latitude first when both are out of range" — which is the
+short-circuit, pinned by a test.
+
 ## Open questions to answer later
 
-- Is `Option[A]` a monoid? Under what conditions? (It depends on what you may assume
-  about `A`.)
-- `Severity` under `max` is a commutative idempotent monoid with identity `Low`. Why does
-  that make it safe to fold alerts in any order?
+Worked through in [Algebra and categories](algebra-and-categories.md): group theory from the
+bottom up, the monoid/semigroup/group ladder, `Severity` under `max`, why associativity and
+idempotence are distributed-systems concerns, categories, functors and endofunctors.
+
+Still open there:
+
+**Monoids**
+
+- Is `Option[A]` a monoid? Under what conditions? It depends on what you may assume about `A`.
+- Which of our types are monoids already, and which only look like one.
+
+**The functor / applicative / monad ladder**
+
+- `map` alone, `map` plus independent combination, `flatMap` with dependence. Each rung buys
+  power and costs a guarantee.
+- Why `Either` short-circuits and `Validated` accumulates, stated in terms of that ladder
+  rather than as a library difference — see §9.
+- Natural transformations, and "a monad is a monoid in the category of endofunctors" made
+  checkable rather than quoted.
+- What the monad laws rule out, with a broken example.

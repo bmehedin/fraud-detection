@@ -34,6 +34,10 @@ Frontend, ML models, multi-region, auth, cloud deployment.
 
 ## Later ideas
 
+- **IPv6 addresses.** `IpAddress.parse` accepts IPv4 only. Validating IPv6 means handling `::`
+  compression and counting groups on both sides — real work for a format the generator does
+  not produce. A real payment system would see IPv6 and send those records to the dead-letter
+  topic.
 - Compare fast-path F3 (processing time) against slow-path F3 (event time) under load —
   planned as a Batch 5 experiment.
 - Avro + Schema Registry instead of JSON (optional Batch 2).

@@ -61,7 +61,8 @@ Update this line at the start of each new batch.
 | Area | Choice | Notes |
 |---|---|---|
 | Language | Scala 2.13.18 | Spark 4.2.0 works with 2.13.18; one version across the repo |
-| Build | sbt (multi-module) 1.12.15 |
+| Build | sbt (multi-module) 1.12.15 | Launcher 2.0.9, installed with Coursier |
+| Tests | ScalaTest 3.2.20 + ScalaCheck 1.20.0 | `AnyFlatSpec` with `Matchers`; bridge `scalacheck-1-20` 3.2.20.0 |
 | JVM | Java 25 | |
 | Local infra | Docker Compose | Until Batch 6 |
 | Messaging | Apache Kafka 4.x (KRaft) | No ZooKeeper |
@@ -125,8 +126,14 @@ explained in `docs/build-layout.md`.
 ## Conventions
 
 - No comments in source files. Explanation lives in `docs/`. See the documentation rule above.
+- Business logic and validation are written test-first
+- Values from outside the program are built through `parse`, never a constructor (ADR 0005)
+- Plain `if` over `if / else if / else`. Write `else` only when that branch genuinely has work
+  to do on the reverse condition. The exception is forced by the language: an `if` used as an
+  expression must have an `else`, or its type widens to `Any`. Chains of conditions that each
+  produce a value are a signal to split the conditions into named functions instead.
 - Immutable case classes and ADTs for the domain model
-- Pick one effect style (Cats Effect or plain Scala) in Batch 1 and record it in an ADR
+- Effects are Cats Effect 3 + fs2 (ADR 0006)
 - Configuration through files and environment variables, never hardcoded
 - Seeded randomness so fraud scenarios are reproducible
 - Every service exposes metrics from the start, even before Batch 5
