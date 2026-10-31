@@ -1,20 +1,40 @@
 package fraud.generator
 
+import java.time.Instant
+
 import cats.effect.{IO, IOApp}
 
 object Main extends IOApp.Simple {
 
-  private val hi: IO[Unit] = IO(println("hi"))
-  val run: IO[Unit] = hi
+  private val sample: IO[Unit] = IO {
+    val at = Instant.parse("2026-10-31T12:00:00Z")
+    val (cards, afterCards) = TransactionGen.cards(1000).run(Seed(42))
+    var seed = afterCards
+    for (_ <- 1 to 5) {
+      val ((card, raw), next) = TransactionGen.next(cards).run(seed)
+      println(TransactionGen.toTransaction(card, at, raw))
+      seed = next
+    }
+  }
 
-  val pair: Rand[(Long, Long, Long)] =
-    for {
-      a <- Rand.nextLong
-      b <- Rand.nextLong
-      c <- Rand.nextLong
-    } yield (a, b, c)
+  val run: IO[Unit] = sample
 
-  println(pair.run(Seed(42)))
+//  val pair: Rand[(Long, Long, Long)] =
+//    for {
+//      a <- Rand.nextLong
+//      b <- Rand.nextLong
+//      c <- Rand.nextLong
+//    } yield (a, b, c)
+//
+//  println(pair.run(Seed(42)))
+//
+//  var seed = Seed(23);
+//  while (true) {
+//    val (n, next) = Rand.between(0, 4).run(seed)
+//    println(n)
+//    Thread.sleep(2000)
+//    seed = next
+//  }
 //  for the same seed you will of course get the same randomly generated numbers
 //  each generated long value is threaded through as a Seed to generate the next long
 //  naturally, using the same seed generated the same number
