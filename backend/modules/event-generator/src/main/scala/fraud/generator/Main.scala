@@ -1,23 +1,35 @@
 package fraud.generator
 
+import java.time.Instant
+
 import scala.concurrent.duration._
 
 import cats.effect.{IO, IOApp}
+import fs2.io.file.{Files, Path}
 
 object Main extends IOApp.Simple {
 
-  val run: IO[Unit] = {
-    val (cards, afterCards) = TransactionGen.cards(1000).run(Seed(42))
-    TransactionGen
-      .stream(cards, afterCards)
-      .metered[IO](10.millis)
-      .evalMap { case (card, raw) =>
-        IO.realTimeInstant.map(at => TransactionGen.toTransaction(card, at, raw))
-      }
-      .evalMap(IO.println)
-      .compile
-      .drain
+  val run: IO[Unit] =
+    Config.parse(sys.env) match {
+      case Left(error)   => IO.raiseError(new IllegalArgumentException(error))
+      case Right(config) => generate(config)
+    }
+
+  private def generate(config: Config): IO[Unit] = {
+    val (cards, afterCards) = TransactionGen.cards(config.cards).run(Seed(config.seed.toLong))
+    val lines = TransactionGen
+      .stream(cards, afterCards, config.fraudPercent)
+      .metered[IO](1.second / config.rate.toLong)
+      .evalMap(g => IO.realTimeInstant.map(at => show(g, at)))
+
+    config.output match {
+      case "stdout" => lines.evalMap(IO.println).compile.drain
+      case path     => lines.through(Files[IO].writeUtf8Lines(Path(path))).compile.drain
+    }
   }
+
+  private def show(g: Generated, at: Instant): String =
+    s"${g.fraud.fold("normal")(_.toString)} ${TransactionGen.toTransaction(g.card, at, g.tx)}"
 
 //  val pair: Rand[(Long, Long, Long)] =
 //    for {

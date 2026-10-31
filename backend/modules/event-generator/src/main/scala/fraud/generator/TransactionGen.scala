@@ -19,6 +19,18 @@ final case class RawTransaction(
     city: RawCity
 )
 
+sealed trait Fraud
+
+object Fraud {
+  case object Blocklist extends Fraud
+  case object Velocity extends Fraud
+  case object ImpossibleTravel extends Fraud
+
+  val all: Vector[Fraud] = Vector(Blocklist, Velocity, ImpossibleTravel)
+}
+
+final case class Generated(card: RawCard, tx: RawTransaction, fraud: Option[Fraud])
+
 object TransactionGen {
 
   val categories: Vector[MerchantCategory] =
@@ -51,8 +63,36 @@ object TransactionGen {
       tx   <- rawFor(card)
     } yield (card, tx)
 
-  def stream(cards: Vector[RawCard], seed: Seed): Stream[Pure, (RawCard, RawTransaction)] =
-    Stream.unfold(seed)(s => Some(next(cards).run(s)))
+  val blockedMerchant: Long = 999
+
+  def normal(cards: Vector[RawCard]): Rand[Vector[Generated]] =
+    next(cards).map { case (card, tx) => Vector(Generated(card, tx, None)) }
+
+  def fraud(cards: Vector[RawCard]): Rand[Vector[Generated]] =
+    for {
+      card    <- Rand.oneOf(cards)
+      pattern <- Rand.oneOf(Fraud.all)
+      burst   <- Rand.listOfN(6, rawFor(card))
+      away    <- Rand.oneOf(cities.filterNot(_ == card.home))
+    } yield {
+      val flagged = (tx: RawTransaction) => Generated(card, tx, Some(pattern))
+      pattern match {
+        case Fraud.Blocklist        => Vector(flagged(burst.head.copy(merchant = blockedMerchant)))
+        case Fraud.Velocity         => burst.map(flagged)
+        case Fraud.ImpossibleTravel => Vector(flagged(burst(0)), flagged(burst(1).copy(city = away)))
+      }
+    }
+
+  def step(cards: Vector[RawCard], fraudPercent: Int): Rand[Vector[Generated]] =
+    Rand.between(0, 100).flatMap { roll =>
+      if (roll < fraudPercent) fraud(cards)
+      else normal(cards)
+    }
+
+  def stream(cards: Vector[RawCard], seed: Seed, fraudPercent: Int): Stream[Pure, Generated] =
+    Stream
+      .unfold(seed)(s => Some(step(cards, fraudPercent).run(s)))
+      .flatMap(batch => Stream.emits(batch))
 
   def toTransaction(rawCard: RawCard, at: Instant, r: RawTransaction): Either[DomainError, Transaction] =
     for {

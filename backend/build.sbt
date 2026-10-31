@@ -34,8 +34,10 @@ lazy val eventGenerator = (project in file("modules/event-generator"))
   .dependsOn(domain)
   .settings(
     name := "event-generator",
+    Compile / run / fork := true,
     libraryDependencies ++= testDependencies ++ Seq(
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
-      "co.fs2" %% "fs2-core" % fs2Version
+      "co.fs2" %% "fs2-core" % fs2Version,
+      "co.fs2" %% "fs2-io" % fs2Version
     )
   )
