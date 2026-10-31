@@ -2,6 +2,8 @@ package fraud.generator
 
 import java.time.Instant
 
+import fs2.{Pure, Stream}
+
 import fraud.domain._
 import fraud.domain.MerchantCategory._
 
@@ -48,6 +50,9 @@ object TransactionGen {
       card <- Rand.oneOf(cards)
       tx   <- rawFor(card)
     } yield (card, tx)
+
+  def stream(cards: Vector[RawCard], seed: Seed): Stream[Pure, (RawCard, RawTransaction)] =
+    Stream.unfold(seed)(s => Some(next(cards).run(s)))
 
   def toTransaction(rawCard: RawCard, at: Instant, r: RawTransaction): Either[DomainError, Transaction] =
     for {

@@ -1,23 +1,23 @@
 package fraud.generator
 
-import java.time.Instant
+import scala.concurrent.duration._
 
 import cats.effect.{IO, IOApp}
 
 object Main extends IOApp.Simple {
 
-  private val sample: IO[Unit] = IO {
-    val at = Instant.parse("2026-10-31T12:00:00Z")
+  val run: IO[Unit] = {
     val (cards, afterCards) = TransactionGen.cards(1000).run(Seed(42))
-    var seed = afterCards
-    for (_ <- 1 to 5) {
-      val ((card, raw), next) = TransactionGen.next(cards).run(seed)
-      println(TransactionGen.toTransaction(card, at, raw))
-      seed = next
-    }
+    TransactionGen
+      .stream(cards, afterCards)
+      .metered[IO](10.millis)
+      .evalMap { case (card, raw) =>
+        IO.realTimeInstant.map(at => TransactionGen.toTransaction(card, at, raw))
+      }
+      .evalMap(IO.println)
+      .compile
+      .drain
   }
-
-  val run: IO[Unit] = sample
 
 //  val pair: Rand[(Long, Long, Long)] =
 //    for {

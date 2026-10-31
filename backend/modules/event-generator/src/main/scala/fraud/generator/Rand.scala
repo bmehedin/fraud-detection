@@ -52,7 +52,7 @@ object Rand {
   }
 
   // recursive function building up n random values of type A
-  // fill the stack with calls down to listOfN(-1, r) then build up from Rand(empty vector) prepending all
+  // fill the stack with calls down to listOfN(0, r) then build up from Rand(empty vector) prepending all
   // random values generated along the way
   def listOfN[A](n: Int, r: Rand[A]): Rand[Vector[A]] =
   // base case described in unit
