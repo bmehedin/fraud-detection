@@ -10,6 +10,8 @@ ThisBuild / scalacOptions ++= Seq(
 
 lazy val catsEffectVersion = "3.7.1"
 lazy val fs2Version = "3.14.0"
+lazy val circeVersion = "0.14.17"
+lazy val fs2KafkaVersion = "3.9.1"
 
 lazy val testDependencies = Seq(
   "org.scalatest" %% "scalatest" % "3.2.20" % Test,
@@ -18,7 +20,7 @@ lazy val testDependencies = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(domain, eventGenerator)
+  .aggregate(domain, eventGenerator, transactionConsumer)
   .settings(
     name := "fraud-detection-backend",
     publish / skip := true
@@ -27,7 +29,7 @@ lazy val root = (project in file("."))
 lazy val domain = (project in file("modules/domain"))
   .settings(
     name := "domain",
-    libraryDependencies ++= testDependencies
+    libraryDependencies ++= testDependencies :+ "io.circe" %% "circe-core" % circeVersion
   )
 
 lazy val eventGenerator = (project in file("modules/event-generator"))
@@ -38,6 +40,19 @@ lazy val eventGenerator = (project in file("modules/event-generator"))
     libraryDependencies ++= testDependencies ++ Seq(
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "co.fs2" %% "fs2-core" % fs2Version,
-      "co.fs2" %% "fs2-io" % fs2Version
+      "co.fs2" %% "fs2-io" % fs2Version,
+      "com.github.fd4s" %% "fs2-kafka" % fs2KafkaVersion
+    )
+  )
+
+lazy val transactionConsumer = (project in file("modules/transaction-consumer"))
+  .dependsOn(domain)
+  .settings(
+    name := "transaction-consumer",
+    Compile / run / fork := true,
+    libraryDependencies ++= testDependencies ++ Seq(
+      "org.typelevel" %% "cats-effect" % catsEffectVersion,
+      "com.github.fd4s" %% "fs2-kafka" % fs2KafkaVersion,
+      "io.circe" %% "circe-parser" % circeVersion
     )
   )

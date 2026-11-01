@@ -6,6 +6,10 @@ import scala.concurrent.duration._
 
 import cats.effect.{IO, IOApp}
 import fs2.io.file.{Files, Path}
+import fs2.kafka.{Acks, KafkaProducer, ProducerRecord, ProducerRecords, ProducerSettings}
+import io.circe.syntax._
+
+import fraud.domain.{DomainError, Transaction}
 
 object Main extends IOApp.Simple {
 
@@ -24,9 +28,29 @@ object Main extends IOApp.Simple {
 
     config.output match {
       case "stdout" => lines.evalMap(IO.println).compile.drain
+      case "kafka"  => publish(config, cards, afterCards)
       case path     => lines.through(Files[IO].writeUtf8Lines(Path(path))).compile.drain
     }
   }
+
+  private def publish(config: Config, cards: Vector[RawCard], seed: Seed): IO[Unit] = {
+    val settings = ProducerSettings[IO, String, String]
+      .withBootstrapServers(config.bootstrapServers)
+      .withAcks(Acks.All)
+      .withEnableIdempotence(true)
+
+    TransactionGen
+      .stream(cards, seed, config.fraudPercent)
+      .metered[IO](1.second / config.rate.toLong)
+      .evalMap(g => IO.realTimeInstant.flatMap(at => toIO(TransactionGen.toTransaction(g.card, at, g.tx))))
+      .map(t => ProducerRecords.one(ProducerRecord(config.topic, t.cardId.value, t.asJson.noSpaces)))
+      .through(KafkaProducer.pipe(settings))
+      .compile
+      .drain
+  }
+
+  private def toIO(result: Either[DomainError, Transaction]): IO[Transaction] =
+    result.fold(error => IO.raiseError(new IllegalStateException(error.toString)), IO.pure)
 
   private def show(g: Generated, at: Instant): String =
     s"${g.fraud.fold("normal")(_.toString)} ${TransactionGen.toTransaction(g.card, at, g.tx)}"
