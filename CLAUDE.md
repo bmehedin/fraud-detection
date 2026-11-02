@@ -43,9 +43,9 @@ The business is deliberately trivial so that the stack stays in focus.
 
 ## Current status
 
-**Active batch:** Batch 1 — Scala event generator
+**Active batch:** Batch 3 — Spark Structured Streaming
 
-Batch 0 is closed: `docs/requirements.md` and `docs/event-schema.md` are written and stable.
+Batch 2 is closed: see `docs/retros/batch-2.md`. Rules in scope: F1, F3, S2.
 
 Update this line at the start of each new batch.
 
@@ -58,8 +58,10 @@ Update this line at the start of each new batch.
 | Tests | ScalaTest 3.2.20 + ScalaCheck 1.20.0 | `AnyFlatSpec` with `Matchers`; bridge `scalacheck-1-20` 3.2.20.0 |
 | JVM | Java 25 | |
 | Local infra | Docker Compose | Until Batch 6 |
-| Messaging | Apache Kafka 4.x (KRaft) | No ZooKeeper |
-| Stream processing | Apache Spark 4.2.0 Structured Streaming | |
+| JSON | circe 0.14.17 (`circe-core`) | Hand-written encoders in `domain` companion objects, ADR 0007 |
+| Messaging | Apache Kafka 4.4.0 (KRaft), image `apache/kafka:4.4.0` | No ZooKeeper; UI `kafbat/kafka-ui:v1.5.0` on :8080 |
+| Kafka client | fs2-kafka 3.9.1 (kafka-clients 3.9.1) | ADR 0007 |
+| Stream processing | Apache Spark 4.2.0 Structured Streaming | Runs in Compose, image `apache/spark:4.2.0-scala2.13-java25-ubuntu`, profile `spark` |
 | Fast state | Redis 8 | |
 | Metrics | Prometheus + Grafana | |
 | Orchestration | Kubernetes (kind or k3d) | Batch 6 |

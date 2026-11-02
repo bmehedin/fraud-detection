@@ -20,7 +20,7 @@ lazy val testDependencies = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(domain, eventGenerator, transactionConsumer)
+  .aggregate(domain, eventGenerator, transactionConsumer, sparkJobs)
   .settings(
     name := "fraud-detection-backend",
     publish / skip := true
@@ -54,5 +54,16 @@ lazy val transactionConsumer = (project in file("modules/transaction-consumer"))
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "com.github.fd4s" %% "fs2-kafka" % fs2KafkaVersion,
       "io.circe" %% "circe-parser" % circeVersion
+    )
+  )
+
+lazy val sparkVersion = "4.2.0"
+
+lazy val sparkJobs = (project in file("modules/spark-jobs"))
+  .settings(
+    name := "spark-jobs",
+    libraryDependencies ++= Seq(
+      "org.apache.spark" %% "spark-sql" % sparkVersion,
+      "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion
     )
   )

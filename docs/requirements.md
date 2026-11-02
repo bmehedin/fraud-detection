@@ -32,6 +32,9 @@ Deliberately thin: the business is not the point.
 
 ## 3. Fraud rules
 
+> **Trimmed 2026-10-31.** Only **F1, F3 and S2** are in scope. F2, S1 and S3 moved to
+> `backlog.md` to keep the project light.
+
 Six rules, three per path. Every rule is a pure function from (event, available state) to
 `Option[Alert]` — no rule performs I/O of its own.
 

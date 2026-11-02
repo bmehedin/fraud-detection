@@ -15,6 +15,12 @@ Ideas that are out of scope for the current batch. Nothing here is a commitment.
 
 *(The `Origin` ADT question is settled — see [ADR 0003](decisions/0003-origin-sum-type.md).)*
 
+## Rules dropped on 2026-10-31
+
+- **F2 amount cap**, **S1 amount deviation**, **S3 unusual category spend.** Cut to keep the
+  project light. S1 and S3 also need card profiles, and S3 needs cards with favourite
+  categories, which the generator does not model.
+
 ## Rule ideas (rules 7, 8, 9 — not in scope)
 
 All three came out of modelling `Origin`, and all three are signals real systems use. They
@@ -40,4 +46,7 @@ Frontend, ML models, multi-region, auth, cloud deployment.
   topic.
 - Compare fast-path F3 (processing time) against slow-path F3 (event time) under load —
   planned as a Batch 5 experiment.
-- Avro + Schema Registry instead of JSON (optional Batch 2).
+- Avro + Schema Registry instead of JSON (optional Batch 2, skipped). Spark needs the 5-byte
+  Confluent header stripped, or ABRiS, to read it.
+- Batch 2 experiments, skipped: kill a consumer and watch the rebalance; produce with null
+  keys and observe ordering; crash a consumer before committing and count duplicates.
