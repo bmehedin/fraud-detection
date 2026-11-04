@@ -4,3 +4,4 @@ target/
 .metals/
 .idea/
 .scala-build/
+data/

@@ -184,10 +184,10 @@ explained in `docs/build-layout.md`.
 **Goal:** the slow-path rules.
 
 - **Learn:** event time vs. processing time, watermarks, windows, checkpointing, stateful processing (`transformWithState`), `foreachBatch`, sink guarantees
-- [ ] Streaming job reading `transactions.raw`
-- [ ] Windowed and stateful slow rules
-- [ ] Alerts written to `fraud.alerts`
-- [ ] Raw events sunk to Parquet
+- [x] Streaming job reading `transactions.raw`
+- [x] Windowed and stateful slow rules
+- [x] Alerts written to `fraud.alerts`
+- [x] Raw events sunk to Parquet
 
 **Done when:** injected impossible-travel fraud produces S2 alerts on `fraud.alerts`, and raw events land in Parquet.
 

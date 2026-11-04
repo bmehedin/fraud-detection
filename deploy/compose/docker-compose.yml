@@ -35,6 +35,7 @@ services:
       - |
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic transactions.raw --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic transactions.dlq --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic fraud.alerts --partitions 3 --replication-factor 1
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --describe
 
   spark-streaming:
@@ -49,9 +50,12 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
       STARTING_OFFSETS: ${STARTING_OFFSETS:-latest}
       CHECKPOINT_DIR: /opt/spark/work-dir/checkpoints/s2
+      PARQUET_DIR: /opt/spark/data/transactions
+      PARQUET_CHECKPOINT_DIR: /opt/spark/work-dir/checkpoints/parquet
     volumes:
       - ../../backend/modules/spark-jobs/target/scala-2.13:/opt/jobs:ro
       - spark-work:/opt/spark/work-dir
+      - ../../data:/opt/spark/data
     command:
       - /opt/spark/bin/spark-submit
       - --master

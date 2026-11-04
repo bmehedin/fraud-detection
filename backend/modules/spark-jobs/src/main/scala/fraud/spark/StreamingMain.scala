@@ -1,8 +1,8 @@
 package fraud.spark
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{col, from_json, struct}
-import org.apache.spark.sql.streaming.{OutputMode, TimeMode}
+import org.apache.spark.sql.functions.{col, concat_ws, floor, from_json, lit, struct, to_date, to_json, unix_millis}
+import org.apache.spark.sql.streaming.{OutputMode, TimeMode, Trigger}
 import org.apache.spark.sql.types._
 
 object StreamingMain {
@@ -47,6 +47,7 @@ object StreamingMain {
         "spark.sql.streaming.stateStore.providerClass",
         "org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider"
       )
+      .config("spark.sql.session.timeZone", "UTC")
       .getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
 
@@ -74,11 +75,36 @@ object StreamingMain {
       .groupByKey(_.cardId)
       .transformWithState(new ImpossibleTravelProcessor(config.maxKmh), TimeMode.EventTime(), OutputMode.Append())
 
-    travelHits.writeStream
-      .format("console")
-      .option("truncate", "false")
+    val alerts = travelHits.select(
+      col("cardId").as("key"),
+      to_json(
+        struct(
+          concat_ws(":", col("cardId"), lit("S2"), floor(unix_millis(col("detectedAt")) / 300000)).as("dedupKey"),
+          col("cardId"),
+          col("triggeredBy"),
+          col("detectedAt"),
+          struct(lit("ImpossibleTravel").as("type"), col("from"), col("to"), col("kmh")).as("evidence")
+        )
+      ).as("value")
+    )
+
+    alerts.writeStream
+      .format("kafka")
+      .option("kafka.bootstrap.servers", config.bootstrapServers)
+      .option("topic", config.alertsTopic)
       .option("checkpointLocation", config.checkpointDir)
       .start()
-      .awaitTermination()
+
+    transactions
+      .withColumn("date", to_date(col("eventTime")))
+      .writeStream
+      .format("parquet")
+      .partitionBy("date")
+      .option("path", config.parquetDir)
+      .option("checkpointLocation", config.parquetCheckpointDir)
+      .trigger(Trigger.ProcessingTime(config.parquetTrigger))
+      .start()
+
+    spark.streams.awaitAnyTermination()
   }
 }
