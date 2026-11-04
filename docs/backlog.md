@@ -20,6 +20,8 @@ Ideas that are out of scope for the current batch. Nothing here is a commitment.
 - **F2 amount cap**, **S1 amount deviation**, **S3 unusual category spend.** Cut to keep the
   project light. S1 and S3 also need card profiles, and S3 needs cards with favourite
   categories, which the generator does not model.
+- **Batch job computing card profiles** (Batch 3). Moved 2026-11-04: no rule in scope uses
+  card profiles once S1 and S3 are gone.
 
 ## Rule ideas (rules 7, 8, 9 — not in scope)
 

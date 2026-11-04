@@ -48,8 +48,10 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
       STARTING_OFFSETS: ${STARTING_OFFSETS:-latest}
+      CHECKPOINT_DIR: /opt/spark/work-dir/checkpoints/s2
     volumes:
       - ../../backend/modules/spark-jobs/target/scala-2.13:/opt/jobs:ro
+      - spark-work:/opt/spark/work-dir
     command:
       - /opt/spark/bin/spark-submit
       - --master
@@ -72,3 +74,6 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+
+volumes:
+  spark-work:

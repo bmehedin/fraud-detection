@@ -1,7 +1,8 @@
 package fraud.spark
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{col, from_json}
+import org.apache.spark.sql.functions.{col, from_json, struct}
+import org.apache.spark.sql.streaming.{OutputMode, TimeMode}
 import org.apache.spark.sql.types._
 
 object StreamingMain {
@@ -42,6 +43,10 @@ object StreamingMain {
     val spark = SparkSession
       .builder()
       .appName("fraud-streaming")
+      .config(
+        "spark.sql.streaming.stateStore.providerClass",
+        "org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider"
+      )
       .getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
 
@@ -53,10 +58,26 @@ object StreamingMain {
       .load()
       .select(col("partition"), col("offset"), from_json(col("value").cast("string"), transactionSchema).as("tx"))
       .select("partition", "offset", "tx.*")
+      .withWatermark("eventTime", config.watermarkDelay)
 
-    transactions.writeStream
+    import spark.implicits._
+
+    val travelHits = transactions
+      .filter(col("origin.type") === "Physical")
+      .select(
+        col("cardId"),
+        col("transactionId"),
+        col("eventTime"),
+        struct(col("origin.point.lat"), col("origin.point.lon"), col("origin.point.country")).as("point")
+      )
+      .as[Visit]
+      .groupByKey(_.cardId)
+      .transformWithState(new ImpossibleTravelProcessor(config.maxKmh), TimeMode.EventTime(), OutputMode.Append())
+
+    travelHits.writeStream
       .format("console")
       .option("truncate", "false")
+      .option("checkpointLocation", config.checkpointDir)
       .start()
       .awaitTermination()
   }

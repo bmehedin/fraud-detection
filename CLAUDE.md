@@ -188,13 +188,8 @@ explained in `docs/build-layout.md`.
 - [ ] Windowed and stateful slow rules
 - [ ] Alerts written to `fraud.alerts`
 - [ ] Raw events sunk to Parquet
-- [ ] Batch job computing card profiles
 
-**Experiments:**
-- Send events 10 minutes late and verify watermark behavior
-- Kill the job mid-stream and restart from checkpoint
-
-**Done when:** late events behave as the watermark predicts, and restarts lose no state.
+**Done when:** injected impossible-travel fraud produces S2 alerts on `fraud.alerts`, and raw events land in Parquet.
 
 ## Batch 4: Redis
 
