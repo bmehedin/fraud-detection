@@ -196,11 +196,13 @@ explained in `docs/build-layout.md`.
 **Goal:** the fast path, plus serving state.
 
 - **Learn:** sorted sets, hashes, TTLs, pipelining, Lua scripts for atomicity, RDB vs. AOF persistence
-- **Libraries:** redis4cats or Lettuce
-- [ ] Redis in Compose
-- [ ] `redis-jobs` consuming Kafka and evaluating fast rules
-- [ ] Velocity via sorted sets, blocklist lookups
-- [ ] Idempotency keys for alert deduplication
+- **Libraries:** redis4cats 2.0.6
+- [x] Redis in Compose (`redis:8.10.3`, AOF on)
+- [x] `redis-jobs` consuming Kafka, malformed events to `transactions.dlq`
+- [x] F3 velocity via sorted sets `velocity:<cardId>`, pipelined; alerts to `fraud.alerts`
+- [ ] F1 blocklist lookups (Redis set, seeded from config)
+- [ ] Lua script for atomic velocity check
+- [ ] Idempotency keys for alert deduplication (`SET alert:<dedupKey> NX EX 86400`, after the produce)
 
 **Done when:** injected blocklist and velocity fraud produce F1 and F3 alerts on `fraud.alerts`.
 
