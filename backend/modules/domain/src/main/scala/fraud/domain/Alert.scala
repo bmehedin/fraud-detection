@@ -1,6 +1,10 @@
 package fraud.domain
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
+
+import io.circe.{Encoder, Json}
+import io.circe.syntax._
 
 final case class DedupKey(value: String) extends AnyVal
 
@@ -70,6 +74,24 @@ object Evidence {
     val rule: RuleId = RuleId.S3
     val severity: Severity = Severity.Medium
   }
+
+  implicit val encoder: Encoder[Evidence] =
+    Encoder.instance {
+      case Blocklisted(BlockReason.BlockedCard(cardId)) =>
+        Json.obj("type" := "Blocklisted", "cardId" := cardId.value)
+      case Blocklisted(BlockReason.BlockedMerchant(merchantId)) =>
+        Json.obj("type" := "Blocklisted", "merchantId" := merchantId.value)
+      case AmountCap(amountMinor, capMinor) =>
+        Json.obj("type" := "AmountCap", "amountMinor" := amountMinor, "capMinor" := capMinor)
+      case Velocity(count, windowSeconds) =>
+        Json.obj("type" := "Velocity", "count" := count, "windowSeconds" := windowSeconds)
+      case AmountDeviation(amountMinor, thresholdMinor) =>
+        Json.obj("type" := "AmountDeviation", "amountMinor" := amountMinor, "thresholdMinor" := thresholdMinor)
+      case ImpossibleTravel(from, to, kmh) =>
+        Json.obj("type" := "ImpossibleTravel", "from" := from, "to" := to, "kmh" := kmh)
+      case UnusualCategory(category, amountMinor, p95Minor) =>
+        Json.obj("type" := "UnusualCategory", "category" := category, "amountMinor" := amountMinor, "p95Minor" := p95Minor)
+    }
 }
 
 final case class Alert(
@@ -81,4 +103,18 @@ final case class Alert(
 ) {
   def rule: RuleId = evidence.rule
   def severity: Severity = evidence.severity
+}
+
+object Alert {
+
+  implicit val encoder: Encoder[Alert] =
+    Encoder.instance { a =>
+      Json.obj(
+        "dedupKey" := a.dedupKey.value,
+        "cardId" := a.cardId.value,
+        "triggeredBy" := a.triggeredBy.value,
+        "detectedAt" := a.detectedAt.truncatedTo(ChronoUnit.MILLIS),
+        "evidence" := a.evidence
+      )
+    }
 }

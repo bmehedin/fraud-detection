@@ -20,7 +20,7 @@ lazy val testDependencies = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(domain, eventGenerator, transactionConsumer, sparkJobs)
+  .aggregate(domain, transactionProducer, transactionConsumer, sparkJobs, redisJobs)
   .settings(
     name := "fraud-detection-backend",
     publish / skip := true
@@ -32,10 +32,10 @@ lazy val domain = (project in file("modules/domain"))
     libraryDependencies ++= testDependencies :+ "io.circe" %% "circe-core" % circeVersion
   )
 
-lazy val eventGenerator = (project in file("modules/event-generator"))
+lazy val transactionProducer = (project in file("modules/transaction-producer"))
   .dependsOn(domain)
   .settings(
-    name := "event-generator",
+    name := "transaction-producer",
     Compile / run / fork := true,
     libraryDependencies ++= testDependencies ++ Seq(
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
@@ -65,5 +65,20 @@ lazy val sparkJobs = (project in file("modules/spark-jobs"))
     libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-sql" % sparkVersion,
       "org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion
+    )
+  )
+
+lazy val redis4catsVersion = "2.0.6"
+
+lazy val redisJobs = (project in file("modules/redis-jobs"))
+  .dependsOn(domain)
+  .settings(
+    name := "redis-jobs",
+    Compile / run / fork := true,
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % catsEffectVersion,
+      "com.github.fd4s" %% "fs2-kafka" % fs2KafkaVersion,
+      "io.circe" %% "circe-parser" % circeVersion,
+      "dev.profunktor" %% "redis4cats-effects" % redis4catsVersion
     )
   )

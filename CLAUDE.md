@@ -43,9 +43,9 @@ The business is deliberately trivial so that the stack stays in focus.
 
 ## Current status
 
-**Active batch:** Batch 3 — Spark Structured Streaming
+**Active batch:** Batch 4 — Redis
 
-Batch 2 is closed: see `docs/retros/batch-2.md`. Rules in scope: F1, F3, S2.
+Batch 3 is closed: see `docs/retros/batch-3.md`. Rules in scope: F1, F3, S2.
 
 Update this line at the start of each new batch.
 
@@ -62,7 +62,7 @@ Update this line at the start of each new batch.
 | Messaging | Apache Kafka 4.4.0 (KRaft), image `apache/kafka:4.4.0` | No ZooKeeper; UI `kafbat/kafka-ui:v1.5.0` on :8080 |
 | Kafka client | fs2-kafka 3.9.1 (kafka-clients 3.9.1) | ADR 0007 |
 | Stream processing | Apache Spark 4.2.0 Structured Streaming | Runs in Compose, image `apache/spark:4.2.0-scala2.13-java25-ubuntu`, profile `spark` |
-| Fast state | Redis 8 | |
+| Fast state | Redis 8.10.3, image `redis:8.10.3` | AOF on (`--appendonly yes`), volume `redis-data` |
 | Metrics | Prometheus + Grafana | |
 | Orchestration | Kubernetes (kind or k3d) | Batch 6 |
 | GitOps | ArgoCD | Batch 6 |
@@ -72,11 +72,11 @@ Pin exact versions in `build.sbt` and `deploy/compose/docker-compose.yml`, then 
 ## Architecture (target)
 
 ```
-[event-generator] ──► Kafka: transactions.raw (key = cardId)
+[transaction-producer] ► Kafka: transactions.raw (key = cardId)
                           │
           ┌───────────────┼────────────────────┐
           ▼               ▼                    ▼
- [fast-path-checker]  [spark-streaming]   [spark sink → Parquet]
+    [redis-jobs]      [spark-streaming]   [spark sink → Parquet]
    Redis, <10ms         windows, state           │
           │               │                      ▼
           └──► Kafka: fraud.alerts ◄──  [spark batch: card profiles → Redis]
@@ -114,8 +114,8 @@ Prometheus scrapes everything → Grafana dashboards
     └── retros/                  one retro per batch
 ```
 
-Modules are added when they have work to do, not up front: `event-generator` later in
-Batch 1, `spark-jobs` in Batch 3, `fast-path-checker` in Batch 4. The build itself is
+Modules are added when they have work to do, not up front: `transaction-producer` later in
+Batch 1, `spark-jobs` in Batch 3, `redis-jobs` in Batch 4. The build itself is
 explained in `docs/build-layout.md`.
 
 ## Conventions
@@ -198,12 +198,11 @@ explained in `docs/build-layout.md`.
 - **Learn:** sorted sets, hashes, TTLs, pipelining, Lua scripts for atomicity, RDB vs. AOF persistence
 - **Libraries:** redis4cats or Lettuce
 - [ ] Redis in Compose
-- [ ] `fast-path-checker` consuming Kafka and evaluating fast rules
+- [ ] `redis-jobs` consuming Kafka and evaluating fast rules
 - [ ] Velocity via sorted sets, blocklist lookups
-- [ ] Card profiles written from Spark into Redis
 - [ ] Idempotency keys for alert deduplication
 
-**Done when:** fast-path p99 is under 10 ms, and replaying a topic creates no duplicate alerts.
+**Done when:** injected blocklist and velocity fraud produce F1 and F3 alerts on `fraud.alerts`.
 
 ## Batch 5: Monitoring
 

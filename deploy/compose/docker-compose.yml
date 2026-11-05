@@ -68,6 +68,19 @@ services:
       - fraud.spark.StreamingMain
       - /opt/jobs/spark-jobs_2.13-0.1.0-SNAPSHOT.jar
 
+  redis:
+    image: redis:8.10.3
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   kafka-ui:
     image: kafbat/kafka-ui:v1.5.0
     depends_on:
@@ -81,3 +94,4 @@ services:
 
 volumes:
   spark-work:
+  redis-data:

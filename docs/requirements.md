@@ -47,7 +47,7 @@ processing-time ordering is good enough.
 |---|---|---|---|---|
 | F1 | Blocklist | `cardId` or `merchantId` is on a denylist | High | Redis set |
 | F2 | Amount cap | `amount > 10_000.00 EUR` | Medium | none (stateless) |
-| F3 | Velocity | more than 5 transactions for one card within 60 s | High | Redis sorted set, score = event time |
+| F3 | Velocity | more than 5 transactions for one card within 10 s | High | Redis sorted set, score = event time |
 
 F2 is stateless: a pure function of the event alone. It exists to prove that the cheapest
 possible rule still flows through the whole pipeline.
@@ -135,7 +135,7 @@ a support process we are not building. If an operator workflow is ever wanted, i
 
 Kept deliberately loose. This is a learning project; tuning is not the goal.
 
-- **Volume:** 100 transactions per second across 1,000 cards. Enough to see behaviour, small
+- **Volume:** 10 transactions per second across 1,000 cards. Enough to see behaviour, small
   enough to run on a laptop.
 - **Fast path:** answers in milliseconds. It only does simple lookups, so it should.
 - **Slow path:** may take minutes. It waits for late data on purpose.

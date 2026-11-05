@@ -14,7 +14,7 @@ object Config {
 
   def parse(env: Map[String, String]): Either[String, Config] =
     for {
-      rate         <- int(env, "RATE", 100)
+      rate         <- int(env, "RATE", 10)
       cards        <- int(env, "CARDS", 1000)
       fraudPercent <- int(env, "FRAUD_PERCENT", 1)
       seed         <- int(env, "SEED", 42)
