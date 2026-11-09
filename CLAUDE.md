@@ -43,9 +43,9 @@ The business is deliberately trivial so that the stack stays in focus.
 
 ## Current status
 
-**Active batch:** Batch 4 — Redis
+**Active batch:** Batch 5 — Monitoring
 
-Batch 3 is closed: see `docs/retros/batch-3.md`. Rules in scope: F1, F3, S2.
+Batch 4 is closed: see `docs/retros/batch-4.md`. Rules in scope: F1, F3, S2.
 
 Update this line at the start of each new batch.
 
@@ -202,7 +202,7 @@ explained in `docs/build-layout.md`.
 - [x] F3 velocity via sorted sets `velocity:<cardId>`, pipelined; alerts to `fraud.alerts`
 - [x] F1 blocklist lookups (Redis set, seeded from config)
 - [x] Lua script for atomic velocity check
-- [ ] Idempotency keys for alert deduplication (`SET alert:<dedupKey> NX EX 86400`, after the produce)
+- [x] Idempotency keys for alert deduplication (`SET alert:<dedupKey> NX EX 86400`, after the produce)
 
 **Done when:** injected blocklist and velocity fraud produce F1 and F3 alerts on `fraud.alerts`.
 
