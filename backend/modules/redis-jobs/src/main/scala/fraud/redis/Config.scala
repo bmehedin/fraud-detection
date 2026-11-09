@@ -10,7 +10,9 @@ final case class Config(
     alertsTopic: String,
     redisUri: String,
     velocityMax: Int,
-    velocityWindow: FiniteDuration
+    velocityWindow: FiniteDuration,
+    blockedCards: Set[String],
+    blockedMerchants: Set[String]
 )
 
 object Config {
@@ -27,8 +29,13 @@ object Config {
       env.getOrElse("ALERTS_TOPIC", "fraud.alerts"),
       env.getOrElse("REDIS_URI", "redis://localhost:6379"),
       velocityMax,
-      velocityWindowSeconds.seconds
+      velocityWindowSeconds.seconds,
+      list(env, "BLOCKED_CARDS", ""),
+      list(env, "BLOCKED_MERCHANTS", "m-999")
     )
+
+  private def list(env: Map[String, String], key: String, default: String): Set[String] =
+    env.getOrElse(key, default).split(',').map(_.trim).filter(_.nonEmpty).toSet
 
   private def int(env: Map[String, String], key: String, default: Int): Either[String, Int] =
     env.get(key) match {

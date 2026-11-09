@@ -3,6 +3,7 @@ package fraud.redis
 import scala.concurrent.duration._
 
 import cats.effect.{IO, IOApp}
+import cats.syntax.all._
 import dev.profunktor.redis4cats.{Redis, RedisCommands}
 import dev.profunktor.redis4cats.effect.Log.Stdout._
 import fs2.Stream
@@ -45,6 +46,7 @@ object Main extends IOApp.Simple {
       redis    <- Stream.resource(Redis[IO].utf8(config.redisUri))
       pong     <- Stream.eval(redis.ping)
       _        <- Stream.eval(IO.println(s"redis: $pong"))
+      _        <- Stream.eval(Blocklist.seed(redis, config))
       producer <- KafkaProducer.stream(producerSettings)
       offset <- KafkaConsumer
         .stream(settings)
@@ -68,12 +70,12 @@ object Main extends IOApp.Simple {
     val where = s"p${record.partition} o${record.offset} key=${record.key}"
     decode[Transaction](record.value) match {
       case Right(tx) =>
-        Velocity.check(redis, config, tx).flatMap {
-          case None => IO.unit
-          case Some(alert) =>
+        List(Blocklist.check(redis, tx), Velocity.check(redis, config, tx)).flatTraverse(_.map(_.toList)).flatMap {
+          _.traverse_ { alert =>
             val out = ProducerRecord(config.alertsTopic, alert.cardId.value, alert.asJson.noSpaces)
             producer.produce(ProducerRecords.one(out)).flatten >>
               IO.println(s"$where ${alert.asJson.noSpaces}")
+          }
         }
       case Left(error) =>
         val dead = ProducerRecord(config.dlqTopic, record.key, record.value)
