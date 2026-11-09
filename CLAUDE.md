@@ -200,8 +200,8 @@ explained in `docs/build-layout.md`.
 - [x] Redis in Compose (`redis:8.10.3`, AOF on)
 - [x] `redis-jobs` consuming Kafka, malformed events to `transactions.dlq`
 - [x] F3 velocity via sorted sets `velocity:<cardId>`, pipelined; alerts to `fraud.alerts`
-- [ ] F1 blocklist lookups (Redis set, seeded from config)
-- [ ] Lua script for atomic velocity check
+- [x] F1 blocklist lookups (Redis set, seeded from config)
+- [x] Lua script for atomic velocity check
 - [ ] Idempotency keys for alert deduplication (`SET alert:<dedupKey> NX EX 86400`, after the produce)
 
 **Done when:** injected blocklist and velocity fraud produce F1 and F3 alerts on `fraud.alerts`.

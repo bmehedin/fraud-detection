@@ -1,28 +1,27 @@
 package fraud.redis
 
+import scala.io.Source
+
 import cats.effect.IO
 import dev.profunktor.redis4cats.RedisCommands
-import dev.profunktor.redis4cats.effects.{Score, ScoreWithValue, ZRange}
+import dev.profunktor.redis4cats.effects.ScriptOutputType
 
 import fraud.domain.{Alert, DedupKey, Evidence, Transaction}
 
 object Velocity {
 
-  def check(redis: RedisCommands[IO, String, String], config: Config, tx: Transaction): IO[Option[Alert]] = {
+  def load(redis: RedisCommands[IO, String, String]): IO[String] =
+    IO.blocking(Source.fromResource("velocity.lua").mkString).flatMap(script => redis.scriptLoad(script))
+
+  def check(redis: RedisCommands[IO, String, String], config: Config, sha: String, tx: Transaction): IO[Option[Alert]] = {
     val key = s"velocity:${tx.cardId.value}"
     val now = tx.eventTime.toEpochMilli
     val windowStart = now - config.velocityWindow.toMillis
+    val args = List(now.toString, windowStart.toString, tx.transactionId.value, config.velocityWindow.toSeconds.toString)
 
     redis
-      .pipeline[Long] { store =>
-        List(
-          redis.zAdd(key, None, ScoreWithValue(Score(now.toDouble), tx.transactionId.value)).void,
-          redis.zRemRangeByScore(key, ZRange(0L, windowStart)).void,
-          redis.zCard(key).flatMap(store.set("count")),
-          redis.expire(key, config.velocityWindow).void
-        )
-      }
-      .map(_.get("count").filter(_ > config.velocityMax).map(count => alert(config, tx, count)))
+      .evalSha(sha, ScriptOutputType.Integer[String], List(key), args)
+      .map(count => Option.when(count > config.velocityMax)(alert(config, tx, count)))
   }
 
   private def alert(config: Config, tx: Transaction, count: Long): Alert =

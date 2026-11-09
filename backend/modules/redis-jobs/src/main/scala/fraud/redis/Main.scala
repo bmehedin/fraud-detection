@@ -6,6 +6,7 @@ import cats.effect.{IO, IOApp}
 import cats.syntax.all._
 import dev.profunktor.redis4cats.{Redis, RedisCommands}
 import dev.profunktor.redis4cats.effect.Log.Stdout._
+import dev.profunktor.redis4cats.effects.{SetArg, SetArgs}
 import fs2.Stream
 import fs2.kafka.{
   Acks,
@@ -47,12 +48,13 @@ object Main extends IOApp.Simple {
       pong     <- Stream.eval(redis.ping)
       _        <- Stream.eval(IO.println(s"redis: $pong"))
       _        <- Stream.eval(Blocklist.seed(redis, config))
+      sha      <- Stream.eval(Velocity.load(redis))
       producer <- KafkaProducer.stream(producerSettings)
       offset <- KafkaConsumer
         .stream(settings)
         .subscribeTo(config.topic)
         .records
-        .evalMap(committable => handle(redis, producer, config, committable.record).as(committable.offset))
+        .evalMap(committable => handle(redis, producer, config, sha, committable.record).as(committable.offset))
     } yield offset
 
     stream
@@ -65,16 +67,23 @@ object Main extends IOApp.Simple {
       redis: RedisCommands[IO, String, String],
       producer: KafkaProducer[IO, String, String],
       config: Config,
+      velocitySha: String,
       record: ConsumerRecord[String, String]
   ): IO[Unit] = {
     val where = s"p${record.partition} o${record.offset} key=${record.key}"
     decode[Transaction](record.value) match {
       case Right(tx) =>
-        List(Blocklist.check(redis, tx), Velocity.check(redis, config, tx)).flatTraverse(_.map(_.toList)).flatMap {
+        List(Blocklist.check(redis, tx), Velocity.check(redis, config, velocitySha, tx)).flatTraverse(_.map(_.toList)).flatMap {
           _.traverse_ { alert =>
+            val dedup = s"alert:${alert.dedupKey.value}"
             val out = ProducerRecord(config.alertsTopic, alert.cardId.value, alert.asJson.noSpaces)
-            producer.produce(ProducerRecords.one(out)).flatten >>
-              IO.println(s"$where ${alert.asJson.noSpaces}")
+            val markSent = SetArgs(SetArg.Existence.Nx, SetArg.Ttl.Ex(config.alertDedupTtl))
+            redis.exists(dedup).ifM(
+              IO.unit,
+              producer.produce(ProducerRecords.one(out)).flatten >>
+                redis.set(dedup, alert.triggeredBy.value, markSent) >>
+                IO.println(s"$where ${alert.asJson.noSpaces}")
+            )
           }
         }
       case Left(error) =>
