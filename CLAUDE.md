@@ -63,7 +63,7 @@ Update this line at the start of each new batch.
 | Kafka client | fs2-kafka 3.9.1 (kafka-clients 3.9.1) | ADR 0007 |
 | Stream processing | Apache Spark 4.2.0 Structured Streaming | Runs in Compose, image `apache/spark:4.2.0-scala2.13-java25-ubuntu`, profile `spark` |
 | Fast state | Redis 8.10.3, image `redis:8.10.3` | AOF on (`--appendonly yes`), volume `redis-data` |
-| Metrics | Prometheus + Grafana | |
+| Metrics | Prometheus 3.16.0 + Grafana 13.3.0 | Images `prom/prometheus:v3.16.0` (:9090), `grafana/grafana:13.3.0` (:3000), data source provisioned |
 | Orchestration | Kubernetes (kind or k3d) | Batch 6 |
 | GitOps | ArgoCD | Batch 6 |
 
