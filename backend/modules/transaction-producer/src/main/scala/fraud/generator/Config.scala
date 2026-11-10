@@ -7,7 +7,8 @@ final case class Config(
     seed: Int,
     output: String,
     bootstrapServers: String,
-    topic: String
+    topic: String,
+    metricsPort: Int
 )
 
 object Config {
@@ -18,6 +19,7 @@ object Config {
       cards        <- int(env, "CARDS", 1000)
       fraudPercent <- int(env, "FRAUD_PERCENT", 1)
       seed         <- int(env, "SEED", 42)
+      metricsPort  <- int(env, "METRICS_PORT", 9401)
     } yield Config(
       rate,
       cards,
@@ -25,7 +27,8 @@ object Config {
       seed,
       env.getOrElse("OUTPUT", "stdout"),
       env.getOrElse("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
-      env.getOrElse("TOPIC", "transactions.raw")
+      env.getOrElse("TOPIC", "transactions.raw"),
+      metricsPort
     )
 
   private def int(env: Map[String, String], key: String, default: Int): Either[String, Int] =

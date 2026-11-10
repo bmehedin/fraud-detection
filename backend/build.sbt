@@ -12,6 +12,7 @@ lazy val catsEffectVersion = "3.7.1"
 lazy val fs2Version = "3.14.0"
 lazy val circeVersion = "0.14.17"
 lazy val fs2KafkaVersion = "3.9.1"
+lazy val prometheusVersion = "1.10.0"
 
 lazy val testDependencies = Seq(
   "org.scalatest" %% "scalatest" % "3.2.20" % Test,
@@ -20,7 +21,7 @@ lazy val testDependencies = Seq(
 )
 
 lazy val root = (project in file("."))
-  .aggregate(domain, transactionProducer, transactionConsumer, sparkJobs, redisJobs)
+  .aggregate(domain, transactionProducer, sparkJobs, redisJobs)
   .settings(
     name := "fraud-detection-backend",
     publish / skip := true
@@ -41,19 +42,10 @@ lazy val transactionProducer = (project in file("modules/transaction-producer"))
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "co.fs2" %% "fs2-core" % fs2Version,
       "co.fs2" %% "fs2-io" % fs2Version,
-      "com.github.fd4s" %% "fs2-kafka" % fs2KafkaVersion
-    )
-  )
-
-lazy val transactionConsumer = (project in file("modules/transaction-consumer"))
-  .dependsOn(domain)
-  .settings(
-    name := "transaction-consumer",
-    Compile / run / fork := true,
-    libraryDependencies ++= testDependencies ++ Seq(
-      "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "com.github.fd4s" %% "fs2-kafka" % fs2KafkaVersion,
-      "io.circe" %% "circe-parser" % circeVersion
+      "io.prometheus" % "prometheus-metrics-core" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-exporter-httpserver" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-instrumentation-jvm" % prometheusVersion
     )
   )
 
@@ -79,6 +71,9 @@ lazy val redisJobs = (project in file("modules/redis-jobs"))
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "com.github.fd4s" %% "fs2-kafka" % fs2KafkaVersion,
       "io.circe" %% "circe-parser" % circeVersion,
-      "dev.profunktor" %% "redis4cats-effects" % redis4catsVersion
+      "dev.profunktor" %% "redis4cats-effects" % redis4catsVersion,
+      "io.prometheus" % "prometheus-metrics-core" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-exporter-httpserver" % prometheusVersion,
+      "io.prometheus" % "prometheus-metrics-instrumentation-jvm" % prometheusVersion
     )
   )

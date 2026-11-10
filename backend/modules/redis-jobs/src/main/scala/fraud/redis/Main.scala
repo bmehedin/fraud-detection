@@ -44,6 +44,7 @@ object Main extends IOApp.Simple {
       .withEnableIdempotence(true)
 
     val stream = for {
+      metrics  <- Stream.resource(Metrics.resource(config.metricsPort))
       redis    <- Stream.resource(Redis[IO].utf8(config.redisUri))
       pong     <- Stream.eval(redis.ping)
       _        <- Stream.eval(IO.println(s"redis: $pong"))
@@ -54,7 +55,7 @@ object Main extends IOApp.Simple {
         .stream(settings)
         .subscribeTo(config.topic)
         .records
-        .evalMap(committable => handle(redis, producer, config, sha, committable.record).as(committable.offset))
+        .evalMap(committable => handle(redis, producer, metrics, config, sha, committable.record).as(committable.offset))
     } yield offset
 
     stream
@@ -66,6 +67,7 @@ object Main extends IOApp.Simple {
   private def handle(
       redis: RedisCommands[IO, String, String],
       producer: KafkaProducer[IO, String, String],
+      metrics: Metrics,
       config: Config,
       velocitySha: String,
       record: ConsumerRecord[String, String]
@@ -73,8 +75,9 @@ object Main extends IOApp.Simple {
     val where = s"p${record.partition} o${record.offset} key=${record.key}"
     decode[Transaction](record.value) match {
       case Right(tx) =>
-        List(Blocklist.check(redis, tx), Velocity.check(redis, config, velocitySha, tx)).flatTraverse(_.map(_.toList)).flatMap {
-          _.traverse_ { alert =>
+        List(Blocklist.check(redis, tx), Velocity.check(redis, config, velocitySha, tx)).flatTraverse(_.map(_.toList)).timed.flatMap {
+          case (duration, alerts) =>
+            metrics.event("ok") >> metrics.checked(duration) >> alerts.traverse_ { alert =>
             val dedup = s"alert:${alert.dedupKey.value}"
             val out = ProducerRecord(config.alertsTopic, alert.cardId.value, alert.asJson.noSpaces)
             val markSent = SetArgs(SetArg.Existence.Nx, SetArg.Ttl.Ex(config.alertDedupTtl))
@@ -82,6 +85,7 @@ object Main extends IOApp.Simple {
               IO.unit,
               producer.produce(ProducerRecords.one(out)).flatten >>
                 redis.set(dedup, alert.triggeredBy.value, markSent) >>
+                metrics.alert(alert.rule) >>
                 IO.println(s"$where ${alert.asJson.noSpaces}")
             )
           }
@@ -90,6 +94,7 @@ object Main extends IOApp.Simple {
         val dead = ProducerRecord(config.dlqTopic, record.key, record.value)
           .withHeaders(Headers(Header("error", error.getMessage)))
         producer.produce(ProducerRecords.one(dead)).flatten >>
+          metrics.event("dlq") >>
           IO.consoleForIO.errorln(s"$where sent to ${config.dlqTopic}: ${error.getMessage}")
     }
   }

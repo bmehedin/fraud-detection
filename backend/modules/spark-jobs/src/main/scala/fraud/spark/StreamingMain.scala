@@ -89,6 +89,7 @@ object StreamingMain {
     )
 
     alerts.writeStream
+      .queryName("s2")
       .format("kafka")
       .option("kafka.bootstrap.servers", config.bootstrapServers)
       .option("topic", config.alertsTopic)
@@ -98,6 +99,7 @@ object StreamingMain {
     transactions
       .withColumn("date", to_date(col("eventTime")))
       .writeStream
+      .queryName("parquet")
       .format("parquet")
       .partitionBy("date")
       .option("path", config.parquetDir)

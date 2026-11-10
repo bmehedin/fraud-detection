@@ -5,6 +5,7 @@ import java.time.Instant
 import scala.concurrent.duration._
 
 import cats.effect.{IO, IOApp}
+import fs2.Stream
 import fs2.io.file.{Files, Path}
 import fs2.kafka.{Acks, KafkaProducer, ProducerRecord, ProducerRecords, ProducerSettings}
 import io.circe.syntax._
@@ -39,12 +40,17 @@ object Main extends IOApp.Simple {
       .withAcks(Acks.All)
       .withEnableIdempotence(true)
 
-    TransactionGen
-      .stream(cards, seed, config.fraudPercent)
-      .metered[IO](1.second / config.rate.toLong)
-      .evalMap(g => IO.realTimeInstant.flatMap(at => toIO(TransactionGen.toTransaction(g.card, at, g.tx))))
-      .map(t => ProducerRecords.one(ProducerRecord(config.topic, t.cardId.value, t.asJson.noSpaces)))
-      .through(KafkaProducer.pipe(settings))
+    Stream
+      .resource(Metrics.resource(config.metricsPort))
+      .flatMap { metrics =>
+        TransactionGen
+          .stream(cards, seed, config.fraudPercent)
+          .metered[IO](1.second / config.rate.toLong)
+          .evalMap(g => IO.realTimeInstant.flatMap(at => toIO(TransactionGen.toTransaction(g.card, at, g.tx))))
+          .map(t => ProducerRecords.one(ProducerRecord(config.topic, t.cardId.value, t.asJson.noSpaces)))
+          .through(KafkaProducer.pipe(settings))
+          .evalTap(_ => metrics.published)
+      }
       .compile
       .drain
   }

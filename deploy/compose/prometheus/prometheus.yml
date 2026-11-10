@@ -5,3 +5,24 @@ scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
+
+  - job_name: redis-jobs
+    static_configs:
+      - targets: ["host.docker.internal:9400"]
+
+  - job_name: kafka-exporter
+    static_configs:
+      - targets: ["kafka-exporter:9308"]
+
+  - job_name: redis-exporter
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  - job_name: spark-streaming
+    metrics_path: /metrics/prometheus
+    static_configs:
+      - targets: ["spark-streaming:4040"]
+
+  - job_name: transaction-producer
+    static_configs:
+      - targets: ["host.docker.internal:9401"]

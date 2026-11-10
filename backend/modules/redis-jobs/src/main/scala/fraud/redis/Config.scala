@@ -13,7 +13,8 @@ final case class Config(
     velocityWindow: FiniteDuration,
     blockedCards: Set[String],
     blockedMerchants: Set[String],
-    alertDedupTtl: FiniteDuration
+    alertDedupTtl: FiniteDuration,
+    metricsPort: Int
 )
 
 object Config {
@@ -23,6 +24,7 @@ object Config {
       velocityMax           <- int(env, "VELOCITY_MAX", 5)
       velocityWindowSeconds <- int(env, "VELOCITY_WINDOW_SECONDS", 10)
       alertDedupTtlSeconds  <- int(env, "ALERT_DEDUP_TTL_SECONDS", 86400)
+      metricsPort           <- int(env, "METRICS_PORT", 9400)
     } yield Config(
       env.getOrElse("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
       env.getOrElse("TOPIC", "transactions.raw"),
@@ -34,7 +36,8 @@ object Config {
       velocityWindowSeconds.seconds,
       list(env, "BLOCKED_CARDS", ""),
       list(env, "BLOCKED_MERCHANTS", "m-999"),
-      alertDedupTtlSeconds.seconds
+      alertDedupTtlSeconds.seconds,
+      metricsPort
     )
 
   private def list(env: Map[String, String], key: String, default: String): Set[String] =
