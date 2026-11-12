@@ -54,8 +54,10 @@ object Main extends IOApp.Simple {
       offset <- KafkaConsumer
         .stream(settings)
         .subscribeTo(config.topic)
-        .records
-        .evalMap(committable => handle(redis, producer, metrics, config, sha, committable.record).as(committable.offset))
+        // creates one stream per partition assigned to this consumer - with a single redis-jobs instance, it gets all 3 kafka partitions so 3 streams run at once
+        .partitionedRecords
+        .map(_.evalMap(committable => handle(redis, producer, metrics, config, sha, committable.record).as(committable.offset)))
+        .parJoinUnbounded
     } yield offset
 
     stream
