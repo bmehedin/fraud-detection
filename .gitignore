@@ -5,3 +5,10 @@ target/
 .idea/
 .scala-build/
 data/
+CLAUDE.md
+docs/algebra-and-categories.md
+docs/io-and-side-effects.md
+docs/pure-randomness.md
+docs/scala-domain-modelling.md
+docs/build-layout.md
+docs/metrics.md
