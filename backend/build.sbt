@@ -67,6 +67,10 @@ lazy val redisJobs = (project in file("modules/redis-jobs"))
   .settings(
     name := "redis-jobs",
     Compile / run / fork := true,
+    assembly / assemblyMergeStrategy := {
+      case "META-INF/io.netty.versions.properties" => MergeStrategy.first
+      case other                                   => (ThisBuild / assemblyMergeStrategy).value(other)
+    },
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "com.github.fd4s" %% "fs2-kafka" % fs2KafkaVersion,
