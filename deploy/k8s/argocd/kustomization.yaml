@@ -23,3 +23,11 @@ patches:
             end
           end
           return hs
+  - target: {kind: ConfigMap, name: argocd-cmd-params-cm}
+    patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cmd-params-cm
+      data:
+        server.insecure: "true"
