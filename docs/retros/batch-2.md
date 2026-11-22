@@ -15,7 +15,7 @@
 - Skipped: the three experiments (rebalance, null keys, crash before commit) and Avro +
   Schema Registry. Both are in `backlog.md`.
 
-## What I'd explain in an interview
+## Key takeaways
 
 - Keying by `cardId` sends every event of one card to the same partition, so they stay in
   order for that card.

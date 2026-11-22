@@ -38,7 +38,7 @@
 - Dropped: windowed rules (S1/S3 were cut on 2026-10-31), the card-profile batch job and the
   experiments. See `backlog.md`.
 
-## What I'd explain in an interview
+## Key takeaways
 
 - The watermark is `max(eventTime seen) − delay`, driven by event time, not by arrival time.
 - `transformWithState` calls my processor once per key per micro-batch; Spark does the

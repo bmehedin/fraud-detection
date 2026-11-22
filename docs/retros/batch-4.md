@@ -34,7 +34,7 @@
 - `dedupKey` = `cardId:<rule>:<eventTime ms / 300000>`, a fixed 5-minute clock bucket. A
   burst that crosses a bucket boundary gives two alerts.
 
-## What I'd explain in an interview
+## Key takeaways
 
 - Sorted set as a sliding window: score = timestamp, trim everything older than the window,
   count what is left.

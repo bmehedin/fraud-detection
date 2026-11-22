@@ -83,9 +83,9 @@ the round trip was the bottleneck.
   a group stops consuming (rate 0), so lag per partition stays in messages.
 - Dashboards and data sources are provisioned from files, never edited in the UI.
 
-## What I'd explain in an interview
+## Key takeaways
 
-See "What I'd explain in an interview" in `docs/metrics.md`. Plus:
+See "Key takeaways" in `docs/metrics.md`. Plus:
 
 - Finding a bottleneck: raise the load, watch which group's lag climbs first, then check that
   path's work rate. If it stays flat while the load rises, that path is the limit.

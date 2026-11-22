@@ -31,7 +31,7 @@ Run: `sbt eventGenerator/run`, or e.g. `FRAUD_PERCENT=10 OUTPUT=out.txt sbt even
 - Rules cut to F1, F3, S2 (see `backlog.md`).
 - Event time is wall clock, so the card/fraud sequence is reproducible but timestamps are not.
 
-## What I'd explain in an interview
+## Key takeaways
 
 - A state monad: a function `Seed => (A, Seed)` with `map`/`flatMap`, which makes `for`
   comprehensions thread state automatically.
