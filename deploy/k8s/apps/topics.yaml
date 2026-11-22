@@ -1,0 +1,29 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: transactions.raw
+  labels:
+    strimzi.io/cluster: fraud
+spec:
+  partitions: 3
+  replicas: 1
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: transactions.dlq
+  labels:
+    strimzi.io/cluster: fraud
+spec:
+  partitions: 1
+  replicas: 1
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: fraud.alerts
+  labels:
+    strimzi.io/cluster: fraud
+spec:
+  partitions: 3
+  replicas: 1

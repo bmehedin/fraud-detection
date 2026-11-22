@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: redis-jobs
 data:
-  KAFKA_BOOTSTRAP_SERVERS: "kafka:19092"
+  KAFKA_BOOTSTRAP_SERVERS: "fraud-kafka-bootstrap:9092"
   REDIS_URI: "redis://redis:6379"
   METRICS_PORT: "9400"
 ---

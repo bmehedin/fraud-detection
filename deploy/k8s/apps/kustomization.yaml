@@ -3,5 +3,8 @@ kind: Kustomization
 namespace: fraud
 resources:
   - namespace.yaml
+  - redis.yaml
+  - kafka.yaml
+  - topics.yaml
   - redis-jobs.yaml
   - transaction-producer.yaml

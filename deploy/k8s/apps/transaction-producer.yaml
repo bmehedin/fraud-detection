@@ -4,7 +4,7 @@ metadata:
   name: transaction-producer
 data:
   OUTPUT: "kafka"
-  KAFKA_BOOTSTRAP_SERVERS: "kafka:19092"
+  KAFKA_BOOTSTRAP_SERVERS: "fraud-kafka-bootstrap:9092"
   RATE: "100"
   CARDS: "1000"
   FRAUD_PERCENT: "1"

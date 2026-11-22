@@ -1,0 +1,51 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: fraud-streaming
+spec:
+  type: Scala
+  mode: cluster
+  sparkVersion: 4.2.0
+  image: fraud/spark-jobs:0.1.0
+  imagePullPolicy: IfNotPresent
+  mainClass: fraud.spark.StreamingMain
+  mainApplicationFile: local:///opt/jobs/spark-jobs.jar
+  restartPolicy:
+    type: Always
+  sparkConf:
+    spark.sql.shuffle.partitions: "3"
+    spark.metrics.conf.*.sink.prometheusServlet.class: org.apache.spark.metrics.sink.PrometheusServlet
+    spark.metrics.conf.*.sink.prometheusServlet.path: /metrics/prometheus
+    spark.metrics.namespace: fraud
+    spark.sql.streaming.metricsEnabled: "true"
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: spark-data
+  driver:
+    serviceAccount: spark
+    cores: 1
+    coreLimit: "1"
+    memory: 768m
+    env:
+      - name: KAFKA_BOOTSTRAP_SERVERS
+        value: fraud-kafka-bootstrap:9092
+      - name: STARTING_OFFSETS
+        value: latest
+      - name: CHECKPOINT_DIR
+        value: /data/checkpoints/s2
+      - name: PARQUET_DIR
+        value: /data/parquet/transactions
+      - name: PARQUET_CHECKPOINT_DIR
+        value: /data/checkpoints/parquet
+    volumeMounts:
+      - name: data
+        mountPath: /data
+  executor:
+    instances: 1
+    cores: 3
+    coreLimit: "3"
+    memory: 1g
+    volumeMounts:
+      - name: data
+        mountPath: /data
