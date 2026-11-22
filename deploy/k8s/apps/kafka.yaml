@@ -49,3 +49,13 @@ spec:
       min.insync.replicas: 1
   entityOperator:
     topicOperator: {}
+  kafkaExporter:
+    groupRegex: ".*"
+    topicRegex: ".*"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi

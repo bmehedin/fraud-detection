@@ -52,3 +52,7 @@ Frontend, ML models, multi-region, auth, cloud deployment.
   Confluent header stripped, or ABRiS, to read it.
 - Batch 2 experiments, skipped: kill a consumer and watch the rebalance; produce with null
   keys and observe ordering; crash a consumer before committing and count duplicates.
+- **Gateway API for the UIs.** Envoy Gateway (`install.yaml`, Kustomize) with `HTTPRoute`s for
+  Grafana, Prometheus, kafka-ui and the Spark UI (`grafana.localhost`, ...). On kind it needs an
+  `extraPortMappings` entry for port 80, so the cluster must be recreated; until then use
+  `kubectl port-forward`.

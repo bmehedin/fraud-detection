@@ -1,0 +1,76 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: redis-jobs
+spec:
+  namespaceSelector:
+    matchNames: [fraud]
+  selector:
+    matchLabels:
+      app: redis-jobs
+  podMetricsEndpoints:
+    - port: metrics
+      relabelings:
+        - {targetLabel: job, replacement: redis-jobs}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: transaction-producer
+spec:
+  namespaceSelector:
+    matchNames: [fraud]
+  selector:
+    matchLabels:
+      app: transaction-producer
+  podMetricsEndpoints:
+    - port: metrics
+      relabelings:
+        - {targetLabel: job, replacement: transaction-producer}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: redis-exporter
+spec:
+  namespaceSelector:
+    matchNames: [fraud]
+  selector:
+    matchLabels:
+      app: redis
+  podMetricsEndpoints:
+    - port: exporter
+      relabelings:
+        - {targetLabel: job, replacement: redis-exporter}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kafka-exporter
+spec:
+  namespaceSelector:
+    matchNames: [fraud]
+  selector:
+    matchLabels:
+      strimzi.io/name: fraud-kafka-exporter
+  podMetricsEndpoints:
+    - port: tcp-prometheus
+      relabelings:
+        - {targetLabel: job, replacement: kafka-exporter}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: spark-streaming
+spec:
+  namespaceSelector:
+    matchNames: [fraud]
+  selector:
+    matchLabels:
+      spark-role: driver
+      sparkoperator.k8s.io/app-name: fraud-streaming
+  podMetricsEndpoints:
+    - port: spark-ui
+      path: /metrics/prometheus
+      relabelings:
+        - {targetLabel: job, replacement: spark-streaming}

@@ -8,3 +8,4 @@ resources:
   - topics.yaml
   - redis-jobs.yaml
   - transaction-producer.yaml
+  - kafka-ui.yaml
